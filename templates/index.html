@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Price Prediction</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <style>
+        body {
+            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+            color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        h1 {
+            font-size: 2.8rem;
+            font-weight: bold;
+            text-align: center;
+            color: #00ffd5;
+            text-shadow: 0 0 10px #00ffd5;
+        }
+        .form-control {
+            border-radius: 25px;
+            border: 1px solid #00ffd5;
+            background-color: #1c2b33;
+            color: #ffffff;
+        }
+        .form-control::placeholder {
+            color: #cccccc;
+        }
+        .btn-primary {
+            background-color: #00ffd5;
+            border: none;
+            color: #000;
+            font-weight: bold;
+            border-radius: 25px;
+        }
+        .btn-success {
+            background-color: #28a745;
+            border: none;
+            font-weight: bold;
+            border-radius: 25px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 213, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 213, 0.1);
+            color: #ffffff;
+        }
+        .card-header {
+            background-color: transparent;
+            border-bottom: 1px solid rgba(0, 255, 213, 0.2);
+            color: #00ffd5;
+            font-weight: bold;
+        }
+        .list-group-item {
+            background-color: transparent;
+            border: none;
+            color: #ffffff;
+        }
+        .spinner-container {
+            display: none;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .spinner-border {
+            color: #00ffd5;
+        }
+        .table {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">📈 Stock Price Prediction</h1>
+
+        <form method="POST" onsubmit="showSpinner()">
+            <div class="form-group">
+                <label for="stock">Enter Stock Symbol:</label>
+                <input type="text" id="stock" name="stock" class="form-control" placeholder="e.g., POWERGRID.NS" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Predict</button>
+        </form>
+
+        <div class="spinner-container" id="loadingSpinner">
+            <div class="spinner-border" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+
+        {% if error_message %}
+        <div class="alert alert-danger mt-3">{{ error_message }}</div>
+        {% endif %}
+
+        {% if plot_path_pred or plot_path_ema_20_50 or plot_path_ema_100_200 or data_desc_html or mae %}
+        <div class="mt-5">
+            <h3 class="mb-4 text-info">📊 Prediction Results</h3>
+
+            {% if mae and rmse and r2 %}
+            <p class="text-light">These metrics help evaluate the accuracy of the predictions made by the model. Lower MAE/RMSE and higher R² indicate better performance.</p>
+            <div class="card mb-4">
+                <div class="card-header text-center">📈 Model Evaluation Metrics</div>
+                <div class="card-body text-center">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="p-3 border rounded bg-dark text-success">
+                                <h5 class="mb-1">Mean Absolute Error</h5>
+                                <h3>{{ mae | round(4) }}</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="p-3 border rounded bg-dark text-warning">
+                                <h5 class="mb-1">Root Mean Squared Error</h5>
+                                <h3>{{ rmse | round(4) }}</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="p-3 border rounded bg-dark text-info">
+                                <h5 class="mb-1">R² Score</h5>
+                                <h3>{{ r2 | round(4) }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if plot_path_pred %}
+            <p class="text-light">The chart below compares the predicted stock prices with actual closing prices over time.</p>
+            <div class="card mb-4">
+                <div class="card-header">Prediction vs Original Trend</div>
+                <div class="card-body text-center">
+                    <img src="{{ plot_path_pred }}" class="img-fluid" alt="Prediction Chart">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if plot_path_ema_20_50 %}
+            <p class="text-light">This plot visualizes the short-term trends using the 20-day and 50-day exponential moving averages (EMA).</p>
+            <div class="card mb-4">
+                <div class="card-header">EMA 20 & 50 Days</div>
+                <div class="card-body text-center">
+                    <img src="{{ plot_path_ema_20_50 }}" class="img-fluid" alt="EMA 20 & 50">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if plot_path_ema_100_200 %}
+            <p class="text-light">This plot shows long-term stock trends using 100-day and 200-day EMAs.</p>
+            <div class="card mb-4">
+                <div class="card-header">EMA 100 & 200 Days</div>
+                <div class="card-body text-center">
+                    <img src="{{ plot_path_ema_100_200 }}" class="img-fluid" alt="EMA 100 & 200">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if data_desc_html %}
+            <p class="text-light">Below are the statistical summaries for the past 1-year stock performance, including open, high, low, close prices and volume.</p>
+            <div class="card mb-4">
+                <div class="card-header">Descriptive Statistics</div>
+                <div class="card-body">
+                    {{ data_desc_html|safe }}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if csv_path %}
+            <p class="text-light text-center">Download the full dataset used for prediction and analysis.</p>
+            <div class="text-center">
+                <a href="{{ url_for('download', filename=csv_path.split('/')[-1]) }}" class="btn btn-success">
+                    📥 Download Data
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+
+    <script>
+        function showSpinner() {
+            document.getElementById("loadingSpinner").style.display = "flex";
+        }
+    </script>
+</body>
+</html>
