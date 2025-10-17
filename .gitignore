@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.env
+scaler.pkl
+scaler_rf.pkl
+powergrid_model.pkl
+stock_rf_model.pkl
+powergrid_model.keras
+stock_dl_model.h5
+*.pkl
+*.h5
+*.keras
+*.csv
+static/*.png
+static/*.csv
